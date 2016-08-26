@@ -51,11 +51,19 @@ class CryptString:
         # RNG
         self.rng = Random.new()
 
+    def _gen_keys(self, salt):
+        keys = PBKDF2(self.secret, salt, BLOCK_SIZE * 2)
+        key_enc = keys[0:BLOCK_SIZE]
+        key_auth = keys[BLOCK_SIZE:]
+
+        return key_enc, key_auth
+
     def encode(self, string):
         iv = self.rng.read(BLOCK_SIZE)
-        key = PBKDF2(self.secret, iv)
-        mac = HMAC.new(key, digestmod=SHA256.new())
-        cipher = AES.new(key, AES.MODE_CBC, iv)
+
+        key_enc, key_auth = self._gen_keys(iv)
+        mac = HMAC.new(key_auth, digestmod=SHA256.new())
+        cipher = AES.new(key_enc, AES.MODE_CBC, iv)
 
         ctext = cipher.encrypt(pad(string))
         mac.update(ctext + iv + self.secret)
@@ -70,9 +78,9 @@ class CryptString:
         iv = data[0:BLOCK_SIZE]
         auth = data[BLOCK_SIZE:BLOCK_SIZE+32]
         ctext = data[BLOCK_SIZE+32:]
-        key = PBKDF2(self.secret, iv)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        mac = HMAC.new(key, digestmod=SHA256.new())
+        key_enc, key_auth = self._gen_keys(iv)
+        cipher = AES.new(key_enc, AES.MODE_CBC, iv)
+        mac = HMAC.new(key_auth, digestmod=SHA256.new())
 
         mac.update(ctext + iv + self.secret)
         auth_c = mac.digest()
