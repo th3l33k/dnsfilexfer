@@ -26,6 +26,7 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256
+from Crypto.Protocol.KDF import PBKDF2
 
 # the block size for the cipher object; must be 16, 24, or 32 for AES
 BLOCK_SIZE = 16
@@ -41,7 +42,8 @@ pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
 
 class CryptString:
     """Encryption with AES-128 in CBC mode and random IV plus HMAC-SHA256
-    authentication with encrypt-then-MAC method."""
+    authentication with encrypt-then-MAC method. The key material is derived
+    from a password with PBKDF2. Each message uses a newly derived key."""
 
     def __init__(self, secret):
         # pad the secret to match our block size
@@ -51,8 +53,9 @@ class CryptString:
 
     def encode(self, string):
         iv = self.rng.read(BLOCK_SIZE)
-        mac = HMAC.new(self.secret, digestmod=SHA256.new())
-        cipher = AES.new(self.secret, AES.MODE_CBC, iv)
+        key = PBKDF2(self.secret, iv)
+        mac = HMAC.new(key, digestmod=SHA256.new())
+        cipher = AES.new(key, AES.MODE_CBC, iv)
 
         ctext = cipher.encrypt(pad(string))
         mac.update(ctext + iv + self.secret)
@@ -65,10 +68,11 @@ class CryptString:
 
         data = base64.b64decode(string)
         iv = data[0:BLOCK_SIZE]
-        auth = data[BLOCK_SIZE:BLOCK_SIZE + 32]
-        ctext = data[BLOCK_SIZE + 32:]
-        cipher = AES.new(self.secret, AES.MODE_CBC, iv)
-        mac = HMAC.new(self.secret, digestmod=SHA256.new())
+        auth = data[BLOCK_SIZE:BLOCK_SIZE+32]
+        ctext = data[BLOCK_SIZE+32:]
+        key = PBKDF2(self.secret, iv)
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        mac = HMAC.new(key, digestmod=SHA256.new())
 
         mac.update(ctext + iv + self.secret)
         auth_c = mac.digest()
