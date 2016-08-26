@@ -66,7 +66,7 @@ class CryptString:
         cipher = AES.new(key_enc, AES.MODE_CBC, iv)
 
         ctext = cipher.encrypt(pad(string))
-        mac.update(ctext + iv + self.secret)
+        mac.update(ctext + iv)
         auth = mac.digest()
         return base64.b64encode(iv + auth + ctext)
 
@@ -82,7 +82,7 @@ class CryptString:
         cipher = AES.new(key_enc, AES.MODE_CBC, iv)
         mac = HMAC.new(key_auth, digestmod=SHA256.new())
 
-        mac.update(ctext + iv + self.secret)
+        mac.update(ctext + iv)
         auth_c = mac.digest()
         if auth_c != auth:
             return None
