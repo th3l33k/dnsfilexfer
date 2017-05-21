@@ -10,6 +10,7 @@ Clone the repo, and install the dependencies as put out in `requirements.txt`:
 % cd dnsfilexfer
 % sudo pip install -r requirements.txt
 ```
+In case the installation fails because of missing `pycrypto`, you might need to install a package called `python-dev`.
 
 ### Sample Usage:
 
